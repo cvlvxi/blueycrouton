@@ -1,0 +1,6 @@
+5,11
+WalkDown,0,0,11
+WalkRight,1,0,11
+WalkUp,2,0,11,
+WalkLeft,3,0,11
+Die,4,0,5
