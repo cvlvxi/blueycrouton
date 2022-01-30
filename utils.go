@@ -15,14 +15,15 @@ import (
 	"github.com/thoas/go-funk"
 )
 
-type Sprite struct {
-	sheetPic     pixel.Picture
-	animationMap map[string][]pixel.Rect
-	frameHeight  float64
-	frameWidth   float64
+type SpriteResource struct {
+	sheetPic       pixel.Picture
+	animationMap   map[string][]pixel.Rect
+	animationNames []string
+	frameHeight    float64
+	frameWidth     float64
 }
 
-func (s *Sprite) Debug() {
+func (s *SpriteResource) Debug() {
 	fmt.Println("Image Max X: ", s.sheetPic.Bounds().Max.X)
 	fmt.Println("Image Max Y: ", s.sheetPic.Bounds().Max.Y)
 	fmt.Println("frameHeight: ", s.frameHeight)
@@ -36,11 +37,11 @@ func (s *Sprite) Debug() {
 	}
 }
 
-func SpriteLoadErr(err error) (Sprite, error) {
-	return Sprite{nil, nil, 0, 0}, err
+func SpriteLoadErr(err error) (SpriteResource, error) {
+	return SpriteResource{nil, nil, nil, 0, 0}, err
 }
 
-func LoadSprite(sheetImagePath string, sheetCsv string) (Sprite, error) {
+func LoadSpriteResource(sheetImagePath string, sheetCsv string) (SpriteResource, error) {
 	var err error
 	var sheetImg image.Image
 	var sheetDef *SpriteDefinition
@@ -62,14 +63,13 @@ func LoadSprite(sheetImagePath string, sheetCsv string) (Sprite, error) {
 	frameHeight := sheetPix.Bounds().Max.Y / float64(sheetDef.gridSize.rows)
 	frameWidth := sheetPix.Bounds().Max.X / float64(sheetDef.gridSize.columns)
 
-	// Max Items should be sheetDef.gridSize
-	// rows x columns
 	var frames [][]pixel.Rect = make([][]pixel.Rect, sheetDef.gridSize.rows)
 	for rowIdx := range frames {
 		frames[rowIdx] = make([]pixel.Rect, sheetDef.gridSize.columns)
 	}
 
 	animations := make(map[string][]pixel.Rect)
+	var animationNames []string
 	var minX, minY, maxX, maxY float64
 	for _, animation := range sheetDef.animations {
 		name := animation.name
@@ -78,7 +78,7 @@ func LoadSprite(sheetImagePath string, sheetCsv string) (Sprite, error) {
 		}
 		minY = float64(animation.rowIdx) * frameHeight
 		minX = float64(animation.colIdxStart) * frameWidth
-		for frameIdx := 0; frameIdx <= animation.numFrames; frameIdx++ {
+		for frameIdx := 0; frameIdx <= animation.numFrames-1; frameIdx++ {
 			nextX := float64(frameIdx+1) * frameWidth
 			if nextX > sheetPix.Bounds().Max.X {
 				minY = minY + frameHeight
@@ -89,24 +89,10 @@ func LoadSprite(sheetImagePath string, sheetCsv string) (Sprite, error) {
 			}
 			maxY = minY + frameHeight
 			animations[name] = append(animations[name], pixel.R(minX, minY, maxX, maxY))
+			animationNames = append(animationNames, name)
 		}
 	}
-
-	// var minX, minY, maxX, maxY float64
-	// for rowIdx := range frames {
-	// 	maxY = minY + frameHeight
-	// 	for colIdx := range frames[rowIdx] {
-	// 		maxX = minX + frameWidth
-	// 		frames[rowIdx][colIdx] = pixel.R(minX, minY, maxX, maxY)
-	// 		minX = maxX
-	// 	}
-	// 	minY = maxY
-	// }
-
-	// for name, def := range sheetDef.animationMap {
-	// 	animations[name] = frames[def.rowIdx][def.colIdxStart:def.colIdxEnd]
-	// }
-	return Sprite{sheetPix, animations, frameHeight, frameWidth}, nil
+	return SpriteResource{sheetPix, animations, animationNames, frameHeight, frameWidth}, nil
 }
 
 func ReadCsvLine(r *csv.Reader) []string {

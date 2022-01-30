@@ -18,26 +18,27 @@ func run() {
 	if err != nil {
 		panic(err)
 	}
-	var sprite Sprite
-	// sprite = LoadSprite("assets/goblin/goblin.png", "assets/goblin/goblin.csv")
-	sprite, err = LoadSprite("assets/gopher/gopher.png", "assets/gopher/gopher.csv")
+	var spriteRes SpriteResource
+	// spriteRes = LoadSprite("assets/goblin/goblin.png", "assets/goblin/goblin.csv")
+	spriteRes, err = LoadSpriteResource("assets/gopher/gopher.png", "assets/gopher/gopher.csv")
 	if err != nil {
 		panic(err)
 	}
-	sprite.Debug()
+	spriteRes.Debug()
 
 	var (
 		camPos       = pixel.ZV
 		camSpeed     = 500.0
 		camZoom      = 1.0
 		camZoomSpeed = 1.2
-		trees        []*pixel.Sprite
+		sprites      []*pixel.Sprite
 		matrices     []pixel.Matrix
 	)
 
-	var names []string = []string{"WalkRight", "WalkRight", "WalkUp", "WalkLeft"}
-	var nameIdx int = 0
-	var frameIdx int = 0
+	var currIdx int = 0
+	var chosenAnimation string = spriteRes.animationNames[currIdx]
+	var numAnimations = len(spriteRes.animationNames)
+	var currFrame int = 0
 
 	last := time.Now()
 	for !win.Closed() {
@@ -48,22 +49,22 @@ func run() {
 		win.SetMatrix(cam)
 
 		if win.JustPressed(pixelgl.MouseButtonLeft) {
-			tree := pixel.NewSprite(sprite.sheetPic, sprite.animationMap[names[nameIdx]][frameIdx])
-			// chosenName := names[nameIdx]
-			// fmt.Println(chosenName)
-			if frameIdx == len(sprite.animationMap[names[nameIdx]])-2 {
-				if nameIdx > len(names)-2 {
-					nameIdx = 0
-				} else {
-					nameIdx = nameIdx + 1
-				}
-				frameIdx = 0
-			} else {
-				frameIdx = frameIdx + 1
-			}
-			trees = append(trees, tree)
+			numFrames := len(spriteRes.animationMap[chosenAnimation])
+			sprite := pixel.NewSprite(spriteRes.sheetPic, spriteRes.animationMap[chosenAnimation][currFrame])
+			sprites = append(sprites, sprite)
 			mouse := cam.Unproject(win.MousePosition())
 			matrices = append(matrices, pixel.IM.Scaled(pixel.ZV, 4).Moved(mouse))
+
+			if (currFrame + 1) > (numFrames - 1) {
+				if (currIdx + 1) > (numAnimations - 1) {
+					currIdx = 0
+				} else {
+					currIdx = currIdx + 1
+				}
+				currFrame = 0
+			} else {
+				currFrame = currFrame + 1
+			}
 
 		}
 		if win.Pressed(pixelgl.KeyLeft) {
@@ -82,7 +83,7 @@ func run() {
 
 		win.Clear(colornames.Forestgreen)
 
-		for i, tree := range trees {
+		for i, tree := range sprites {
 			tree.Draw(win, matrices[i])
 		}
 
